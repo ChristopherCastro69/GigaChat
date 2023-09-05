@@ -16,7 +16,6 @@ import {Button} from "@/components/ui/button";
 import {useRouter} from "next/navigation";
 import {useState} from "react";
 
-import OpenAI from 'openai';
 import {Empty} from "@/components/empty";
 import {Loader} from "@/components/loader";
 import {cn} from "@/lib/utils";
@@ -24,15 +23,17 @@ import {cn} from "@/lib/utils";
 import {UserAvatar} from "@/components/user-avatar";
 import {BotAvatar} from "@/components/bot-avatar";
 
-const ImagePage = () => {
+const ConversationPage = () => {
     const router = useRouter();
-    const [messages,
-        setMessages] = useState < OpenAI.Chat.ChatCompletionMessage[] > ([])
+    const [images,
+        setImages] = useState < string[] > ([])
 
     const form = useForm < z.infer < typeof formSchema >> ({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            prompt: ""
+            prompt: "",
+            amount: "1",
+            resolution: "1024x1024"
         }
     })
 
@@ -40,22 +41,12 @@ const ImagePage = () => {
 
     const onSubmit = async(values : z.infer < typeof formSchema >) => {
         try {
-            const userMessage : OpenAI.Chat.ChatCompletionMessage = {
-                role: "user",
-                content: values.prompt
-            };
-            const newMessages = [
-                ...messages,
-                userMessage
-            ];
+            setImages([]);
+            const response = await axios.post("/api/image", values);
 
-            const response = await axios.post("/api/conversation", {messages: newMessages});
+            const urls = response.data.map((image: {url : string }) => image.url);
 
-            setMessages((current) => [
-                ...current,
-                userMessage,
-                response.data
-            ]);
+            setImages(urls);
 
             form.reset();
         } catch (error : any) {
@@ -71,11 +62,11 @@ const ImagePage = () => {
     return (
         <div>
             <Heading
-                 title="Conversation"
-                 description="Our most advanced conversation model"
-                 icon={MessageSquare}
-                 iconColor="text-violet-500"
-                 bgColor="bg-violet-500/10"/>
+                 title="Image Generation"
+                 description="Turn your prompt into an image"
+                 icon={ImageIcon}
+                 iconColor="text-pink-700"
+                 bgColor="bg-pink-700/10"/>
 
             <div className="px-4 lg:px-8"></div>
             <div>
@@ -102,11 +93,20 @@ const ImagePage = () => {
                                     <Input
                                         className="border-0 outline-none focus-visible:ring-0 focus-visible: ring-transparent"
                                         disabled={isLoading}
-                                        placeholder="How to fix a broken heart."
+                                        placeholder="A picture of a loyal man"
                                         {...field}/>
                                 </FormControl>
                             </FormItem>
                         )}/>
+                        <FormField 
+                            control={form.control}
+                            name="amount"
+                            render={({ field }) => (
+                                <FormItem className="col-span-12 lg:col-span-2">
+                                    
+                                </FormItem>
+                            )}
+                        />
                         <Button className="col-span-12 lg:col-span-2" disabled={isLoading}>
                             Generate
                         </Button>
@@ -116,30 +116,18 @@ const ImagePage = () => {
             <div className="space-y-4 mt-4 ml-4">
                 {isLoading && (
                     <div
-                        className="p-8 rounded-lg w-full flex items-center justify-center bg-muted">
+                        className="p-20">
                         <Loader/>
                     </div>
                 )}
-                {messages.length === 0 && !isLoading && (<Empty label="Say something to the conversation."/>)}
+                {images.length === 0 && !isLoading && (<Empty label=
+                "No images generated."/>)}
                 <div className="flex flex-col-reverse gap-y-4">
-                    {messages.map((message) => (
-                        <div
-                            key={message.content}
-                            className={cn("p-8 w-full flex items-start gap-x-8 rounded-lg", message.role === "user"
-                            ? "bg-white border border-black/10"
-                            : "bg-muted",)}>
-                            {message.role === "user"
-                                ? <UserAvatar/>
-                                : <BotAvatar/>}
-                            <p className="text-sm">
-                                {message.content}
-                            </p>
-                        </div>
-                    ))}
+                    Images will be rendered here:
                 </div>
             </div>
         </div>
     );
 }
 
-export default ImagePage;
+export default ConversationPage;
