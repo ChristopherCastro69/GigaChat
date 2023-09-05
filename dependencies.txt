@@ -14,4 +14,7 @@ npm i openai
 
 npm i axios
 
+npx shadcn-ui@latest add avatar
+
+
 https://github.com/openai/openai-node/discussions/217
